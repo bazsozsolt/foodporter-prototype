@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Food Porter — Pilot Prototype</title>
+<style>
+:root{--o:#ff5a1f;--od:#e1440c;--ink:#1d1b24;--mut:#7a7686;--bg:#f6f4f1;--card:#fff;--g:#14a36b}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#e9e5df;color:var(--ink)}
+.phone{max-width:420px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:90px;box-shadow:0 0 40px #0002}
+header{background:linear-gradient(135deg,var(--o),#ff8a3d);color:#fff;padding:18px 18px 22px;border-radius:0 0 24px 24px}
+header h1{margin:0;font-size:22px;letter-spacing:-.5px}header p{margin:4px 0 0;opacity:.9;font-size:13px}
+.roles{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;display:flex;background:#fff;border-top:1px solid #eee;padding:8px;gap:6px;z-index:9}
+.roles button{flex:1;border:0;background:#f3f1ee;padding:10px 4px;border-radius:12px;font-weight:600;color:var(--mut);position:relative}
+.roles button.on{background:var(--ink);color:#fff}.badge{position:absolute;top:4px;right:10px;background:var(--o);color:#fff;border-radius:9px;font-size:10px;padding:1px 6px}
+main{padding:16px}.card{background:var(--card);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px #0000000d}
+.rest{display:flex;gap:12px;align-items:center;cursor:pointer}.emoji{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;font-size:32px}
+h2{font-size:18px;margin:6px 0 12px}h3{margin:0;font-size:16px}.mut{color:var(--mut);font-size:13px}
+.btn{display:block;width:100%;border:0;background:var(--o);color:#fff;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+.btn:hover{background:var(--od)}.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid #e2ded8}.btn.dark{background:var(--ink)}.btn.green{background:var(--g)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.qty button{width:30px;height:30px;border-radius:50%;border:0;background:#f1ede8;font-weight:700}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1.5px solid #e2ded8;background:#fff;border-radius:20px;padding:8px 14px;font-weight:600;cursor:pointer}.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+input{width:100%;padding:12px;border-radius:12px;border:1.5px solid #e2ded8;font-size:15px;margin:4px 0 10px}
+.tl{list-style:none;padding:0;margin:0}.tl li{padding:8px 0 8px 28px;position:relative;color:var(--mut)}.tl li:before{content:"";position:absolute;left:6px;top:12px;width:12px;height:12px;border-radius:50%;background:#ddd}
+.tl li.done{color:var(--ink);font-weight:600}.tl li.done:before{background:var(--g)}.tl li.cur:before{background:var(--o);box-shadow:0 0 0 5px #ff5a1f33}
+.eta{font-size:40px;font-weight:800;color:var(--o)}.pill{display:inline-block;background:#fff1ea;color:var(--od);border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700}
+.pill.g{background:#e3f7ee;color:var(--g)}.toast{position:fixed;top:auto;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:99;opacity:0;transition:.3s;max-width:380px}
+.toast.show{opacity:1}.sso{display:flex;align-items:center;justify-content:center;gap:8px}.empty{text-align:center;padding:40px 10px;color:var(--mut)}
+.stat{display:flex;gap:10px}.stat .card{flex:1;text-align:center;margin:0}.stat b{font-size:22px;display:block}
+</style></head><body><div class="phone"><header><h1>🛵 Food Porter</h1><p id="sub">Tilburg Centrum · pilot prototype (example data)</p></header><main id="v"></main>
+<nav class="roles"><button data-r="customer">🍽️ Customer</button><button data-r="restaurant">👩‍🍳 Restaurant<span class="badge" id="bR" hidden></span></button><button data-r="rider">🚲 Rider<span class="badge" id="bD" hidden></span></button></nav></div><div class="toast" id="t"></div>
+<script>
+const R=[{id:1,n:"Spoorzone Burger Co. (example)",c:"Burgers · Spoorzone",e:"🍔",bg:"#ffe6d6",p:15,items:[["Smash Burger",11.5],["Truffle Fries",4.75],["Veggie Burger",10.95],["Milkshake",4.5]]},
+{id:2,n:"Piushaven Pizza (example)",c:"Wood-fired pizza · Piushaven",e:"🍕",bg:"#ffe9e9",p:20,items:[["Margherita",10.5],["Diavola",13],["Tiramisu",6]]},
+{id:3,n:"Heuvel Noodle Bar (example)",c:"Asian · Heuvel",e:"🍜",bg:"#e8f3ff",p:12,items:[["Pad Thai",13.5],["Ramen Shoyu",14.5],["Gyoza (6)",6.5]]},
+{id:4,n:"Korvel Kebab House (example)",c:"Turkish · Korvel",e:"🥙",bg:"#eef8e6",p:10,items:[["Durum Döner",9.5],["Lahmacun",7],["Ayran",2.5]]}];
+const FEE=2.95;let S={role:"customer",auth:false,view:"home",rest:null,cart:{},orders:[],earn:[{d:"Mon 5 Oct",o:"Piushaven Pizza",f:3.25},{d:"Wed 7 Oct",o:"Heuvel Noodle Bar",f:2.95},{d:"Fri 9 Oct",o:"Spoorzone Burger Co.",f:2.95},{d:"Sat 10 Oct",o:"Korvel Kebab",f:3.5}],paid:"Previous week (28 Sep–4 Oct): €38.40 paid out on Mon 5 Oct"};
+const $=s=>document.querySelector(s),eur=x=>"€"+x.toFixed(2).replace(".",","),v=$("#v");
+function toast(m){const t=$("#t");t.textContent=m;t.classList.add("show");clearTimeout(t.h);t.h=setTimeout(()=>t.classList.remove("show"),2600)}
+function cur(){return S.orders[S.orders.length-1]}
+const STEPS=["placed","accepted","assigned","ready","picked","delivered"],LBL={placed:"Order placed & paid",accepted:"Restaurant accepted",assigned:"Rider assigned",ready:"Ready for pickup",picked:"On the way",delivered:"Delivered"};
+function badges(){const o=cur();$("#bR").hidden=!(o&&o.st=="placed");$("#bR").textContent="1";$("#bD").hidden=!(o&&o.st=="accepted");$("#bD").textContent="1"}
+function render(){document.querySelectorAll(".roles button").forEach(b=>b.classList.toggle("on",b.dataset.r==S.role));badges();({customer:cust,restaurant:resto,rider:rider})[S.role]();scrollTo(0,0)}
+function cust(){
+ if(!S.auth){v.innerHTML=`<h2>Welcome 👋</h2><p class="mut">Order from Tilburg's favourite local spots. Riders bid to bring it to you fast.</p>
+ <button class="btn dark sso" onclick="login('Apple')"> Continue with Apple</button><button class="btn ghost sso" onclick="login('Google')"><b style="color:#4285f4">G</b> Continue with Google</button>
+ <button class="btn ghost" onclick="login('email')">✉️ Continue with email</button><p class="mut" style="text-align:center">Facebook login coming later · mock sign-in only</p>`;return}
+ const o=cur();if(S.view=="track"&&o)return track(o);
+ if(S.view=="menu"){const r=S.rest;let tot=0,n=0;for(const k in S.cart){tot+=r.items[k][1]*S.cart[k];n+=S.cart[k]}
+  v.innerHTML=`<a class="mut" onclick="go('home')" style="cursor:pointer">← All restaurants</a><div class="card rest" style="margin-top:10px"><div class="emoji" style="background:${r.bg}">${r.e}</div><div><h3>${r.n}</h3><div class="mut">${r.c} · ~${r.p} min prep</div></div></div>
+  ${r.items.map((it,i)=>`<div class="card row"><div><b>${it[0]}</b><div class="mut">${eur(it[1])}</div></div><div class="qty row"><button onclick="q(${i},-1)">−</button><b>${S.cart[i]||0}</b><button onclick="q(${i},1)">+</button></div></div>`).join("")}
+  ${n?`<button class="btn" onclick="go('checkout')">Checkout · ${n} item${n>1?"s":""} · ${eur(tot)}</button>`:""}`;return}
+ if(S.view=="checkout"){const r=S.rest;let tot=0;for(const k in S.cart)tot+=r.items[k][1]*S.cart[k];
+  v.innerHTML=`<a class="mut" onclick="go('menu')" style="cursor:pointer">← Back to menu</a><h2>Checkout</h2><div class="card"><label class="mut">Delivery address</label><input id="addr" value="Heuvelstraat 12, 5038 AA Tilburg"><label class="mut">Phone (for SMS updates)</label><input value="+31 6 1234 5678"></div>
+  <div class="card">${Object.keys(S.cart).map(k=>`<div class="row"><span>${S.cart[k]}× ${r.items[k][0]}</span><span>${eur(r.items[k][1]*S.cart[k])}</span></div>`).join("")}<hr style="border:0;border-top:1px dashed #ddd"><div class="row mut"><span>Delivery fee (flat)</span><span>${eur(FEE)}</span></div><div class="row"><b>Total</b><b>${eur(tot+FEE)}</b></div></div>
+  <div class="card"><b>Pay with Mollie</b><div class="chips" style="margin-top:8px"><span class="chip on" onclick="pick(this)">iDEAL</span><span class="chip" onclick="pick(this)">Card</span></div></div>
+  <button class="btn" onclick="place(${tot})">Pay ${eur(tot+FEE)} with iDEAL</button>`;return}
+ v.innerHTML=`<h2>Restaurants near you</h2>${o&&o.st!="delivered"?`<div class="card row" onclick="go('track')" style="cursor:pointer;background:#fff1ea"><b>🛵 Track your order</b><span class="pill">${LBL[o.st]}</span></div>`:""}
+ ${R.map(r=>`<div class="card rest" onclick="openR(${r.id})"><div class="emoji" style="background:${r.bg}">${r.e}</div><div style="flex:1"><h3>${r.n}</h3><div class="mut">${r.c}</div><div style="margin-top:6px"><span class="pill">~${r.p+12} min</span> <span class="pill g">${eur(FEE)} delivery</span></div></div></div>`).join("")}`}
+function track(o){const i=STEPS.indexOf(o.st);
+ v.innerHTML=`<a class="mut" onclick="go('home')" style="cursor:pointer">← Home</a><div class="card" style="text-align:center;margin-top:10px">${o.st=="delivered"?`<div style="font-size:48px">🎉</div><h2>Delivered!</h2><p class="mut">${o.onTime?"On time — enjoy your meal.":"Thanks for your patience."}</p>`:o.bid?`<div class="mut">Arriving in about</div><div class="eta">${o.bid.eta} min</div><div class="mut">by ${o.bid.time} · rider ${o.bid.name} 🚲</div>`:`<div class="mut">Waiting for ${i<1?"restaurant":"a rider bid"}…</div><div class="eta">⏳</div>`}</div>
+ <div class="card"><b>${o.r.n}</b><ul class="tl">${STEPS.map((s,j)=>`<li class="${j<=i?"done":""} ${j==i+1?"cur":""}">${LBL[s]}${s=="accepted"&&o.prep?` · ${o.prep} min prep`:""}${s=="assigned"&&o.bid?` · ${o.bid.name}, ETA ${o.bid.eta} min`:""}</li>`).join("")}</ul></div>
+ <div class="card mut">📱 SMS updates are sent to +31 6 1234 5678 at each step.</div>
+ ${o.st=="delivered"?`<button class="btn" onclick="reset()">Order again</button>`:`<p class="mut" style="text-align:center">Prototype tip: switch to <b>${{placed:"Restaurant",accepted:"Rider",assigned:"Restaurant",ready:"Rider",picked:"Rider"}[o.st]}</b> below to move the order forward.</p>`}`}
+function resto(){const o=cur();const act=o&&["placed","accepted","assigned"].includes(o.st)?o:null;$("#sub").textContent="Restaurant dashboard · Partner kitchen view";
+ const done=S.orders.filter(x=>x.st!="placed"&&x.st!="accepted"&&x.st!="assigned");const rev=done.reduce((a,x)=>a+x.sub,0);
+ v.innerHTML=`<div class="stat"><div class="card"><b>${done.length}</b><span class="mut">Handed over today</span></div><div class="card"><b>${eur(rev)}</b><span class="mut">Revenue</span></div><div class="card"><b>${eur(rev*.12)}</b><span class="mut">Commission 12%</span></div></div><h2 style="margin-top:16px">Incoming orders</h2>
+ ${!act?`<div class="empty">🍳<br>No open orders. Place one as a Customer.</div>`:`<div class="card"><div class="row"><b>#${act.id} · ${act.r.n}</b><span class="pill">${act.st=="placed"?"NEW":LBL[act.st]}</span></div><div class="mut" style="margin:6px 0">${act.lines}</div><div class="mut">Deliver to ${act.addr}</div>
+ ${act.st=="placed"?`<p><b>Set preparation time</b></p><div class="chips">${[10,15,20,30].map(m=>`<span class="chip ${m==15?"on":""}" onclick="pick(this);S.prepSel=${m}">${m} min</span>`).join("")}</div><button class="btn green" onclick="accept()">Accept order</button><button class="btn ghost" onclick="toast('Rejected orders are refunded via Mollie (not simulated)')">Reject</button>`
+ :`<p>Prep time: <b>${act.prep} min</b> · ${act.bid?`Rider <b>${act.bid.name}</b> coming`:"waiting for rider bid"}</p><button class="btn" onclick="ready()">✅ Mark ready for pickup</button>`}</div>`}`}
+function rider(){const o=cur();$("#sub").textContent="Rider app · Tilburg Centrum";const tot=S.earn.reduce((a,e)=>a+e.f,0);let job="";
+ if(o&&o.st=="accepted"){job=`<h2>Open orders</h2><div class="card"><div class="row"><b>${o.r.e} ${o.r.n}</b><span class="pill g">${eur(FEE)}</span></div><div class="mut" style="margin:6px 0">Ready in ~${o.prep} min · drop-off 1.4 km · ${o.addr}</div>
+ <p><b>Bid your delivery time</b></p><div class="chips">${[o.prep+8,o.prep+12,o.prep+18,o.prep+25].map((m,i)=>`<span class="chip ${i==1?"on":""}" onclick="pick(this);S.bidSel=${m}">${m} min</span>`).join("")}</div>
+ <p class="mut">2 other riders are bidding · lowest realistic ETA wins</p><button class="btn" onclick="bid(${o.prep+12})">Place bid</button></div>`}
+ else if(o&&["assigned","ready","picked"].includes(o.st)){job=`<h2>Active job</h2><div class="card"><div class="row"><b>#${o.id} ${o.r.n}</b><span class="pill">${LBL[o.st]}</span></div><p class="mut">Your ETA: ${o.bid.eta} min (by ${o.bid.time}) · to ${o.addr}</p>
+ ${o.st=="assigned"?`<div class="empty" style="padding:10px">⏳ Waiting for restaurant to mark ready…</div>`:o.st=="ready"?`<button class="btn" onclick="adv('picked')">📦 Picked up</button>`:`<button class="btn green" onclick="deliver()">✅ Delivered</button>`}</div>`}
+ else job=`<h2>Open orders</h2><div class="empty">📭<br>No orders to bid on right now.</div>`;
+ v.innerHTML=job+`<h2>Earnings</h2><div class="stat"><div class="card"><b>${eur(tot)}</b><span class="mut">This week (paid next Mon)</span></div><div class="card"><b>${S.earn.length}</b><span class="mut">Deliveries</span></div></div><div class="card" style="margin-top:12px">${S.earn.slice().reverse().map(e=>`<div class="row" style="padding:6px 0;border-bottom:1px solid #f1eee9"><span>${e.o}<div class="mut">${e.d}</div></span><b>${eur(e.f)}</b></div>`).join("")}<p class="mut">💶 ${S.paid}. You keep 100% of the delivery fee.</p></div>`}
+function login(p){S.auth=true;toast("Signed in with "+p+" (mock)");render()}
+function go(x){S.view=x;render()}function openR(id){S.rest=R.find(r=>r.id==id);S.cart={};go("menu")}
+function q(i,d){S.cart[i]=Math.max(0,(S.cart[i]||0)+d);if(!S.cart[i])delete S.cart[i];render()}
+function pick(el){el.parentNode.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));el.classList.add("on")}
+function place(sub){const r=S.rest;S.orders.push({id:1040+S.orders.length,r,sub,st:"placed",addr:$("#addr").value,lines:Object.keys(S.cart).map(k=>S.cart[k]+"× "+r.items[k][0]).join(", "),t0:Date.now()});S.cart={};toast("Payment authorised via Mollie (mock) · SMS sent");go("track")}
+function accept(){const o=cur();o.prep=S.prepSel||15;o.st="accepted";S.prepSel=null;toast("Accepted · order published to riders");render()}
+function bid(def){const o=cur(),m=S.bidSel||def,d=new Date(Date.now()+m*6e4);o.bid={eta:m,name:"Sanne",time:d.toTimeString().slice(0,5)};o.bidSec=Math.round((Date.now()-o.t0)/1000);o.st="assigned";S.bidSel=null;toast("Bid accepted! Customer notified: ETA "+m+" min");render()}
+function ready(){const o=cur();if(!o.bid)return toast("Wait for a rider to claim it first");o.st="ready";toast("Rider notified: food is ready");render()}
+function adv(s){cur().st=s;toast(s=="picked"?"Customer SMS: your food is on the way":"");render()}
+function deliver(){const o=cur();o.st="delivered";o.onTime=true;S.earn.push({d:"Today",o:o.r.n.replace(" (example)",""),f:FEE});toast("Delivered on time ✅ · "+eur(FEE)+" added to earnings");render()}
+function reset(){S.view="home";render()}
+document.querySelectorAll(".roles button").forEach(b=>b.onclick=()=>{S.role=b.dataset.r;$("#sub").textContent="Tilburg Centrum · pilot prototype (example data)";if(b.dataset.r=="customer"&&cur()&&cur().st!="delivered")S.view="track";render()});
+render();
+</script></body></html>
